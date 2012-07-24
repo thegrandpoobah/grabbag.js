@@ -1,4 +1,4 @@
-# grabbag.js - A Grabbag of UI patterns and functionality
+# grabbag.js - An assortment of UI patterns and functionality
 
 ## Description
 
