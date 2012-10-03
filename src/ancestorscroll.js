@@ -1,4 +1,8 @@
 (function ($) {
+	/*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true, undef:true, unused:true, smarttabs:true, browser:true, jquery:true */
+	
+	'use strict';
+	
 	// one event named 'scroll' is not good enough
 	// to determine when something scrolls apparently
 	var scrollEvents = ['scroll', 'mousewheel', 'wheel', 'DOMMouseScroll'],
@@ -16,9 +20,9 @@
 	$.event.special.ancestorscroll = {
 		add: function (handleObj) {
 			rebind(this, handleObj, 'bind');
-		}
-		, remove: function (handleObj) {
+		},
+		remove: function (handleObj) {
 			rebind(this, handleObj, 'unbind');
 		}
-	}
+	};
 })(jQuery);

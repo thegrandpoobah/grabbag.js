@@ -1,4 +1,8 @@
 (function(undefined) {
+	/*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true, undef:true, unused:true, smarttabs:true, browser:true */
+	
+	'use strict';
+	
 	var borrowStyles = 'fontFamily fontSize fontStyle fontVariant fontWeight'.split(' '),
 		measurementDiv = document.createElement('div');
 		
@@ -62,12 +66,12 @@
 		}
 		
 		measurementDiv.innerHTML = escapeHtml(str);
-		bounds = measurementDiv.getBoundingClientRect();
+		var bounds = measurementDiv.getBoundingClientRect();
 		
 		return {
 			width: 
-				bounds.width ? bounds.width : (bounds.right - bounds.left)
-			, height: 
+				bounds.width ? bounds.width : (bounds.right - bounds.left),
+			height: 
 				bounds.height ? bounds.height : (bounds.bottom - bounds.top)
 		};
 	}
@@ -107,7 +111,7 @@
 		detachMeasurementDiv();
 	
 		return result;
-	}
+	};
 
 	/**
 	  Measures a list of strings and returns all of their dimensions.
@@ -153,7 +157,7 @@
 		detachMeasurementDiv();
 		
 		return result;
-	}
+	};
 	
 	/**
 	  Crops the given string so that the pixel width of the resultant
@@ -223,5 +227,5 @@
 		detachMeasurementDiv();
 		
 		return partial;
-	}
+	};
 })();

@@ -1,4 +1,8 @@
 (function($, undefined) {
+	/*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true, undef:true, unused:true, smarttabs:true, browser:true, jquery:true */
+	
+	'use strict';
+	
 	// this is a list of valid events to capture. Because there is some overhead involved
 	// in having the capturing "infrastructure" in place, this list should be kept as small
 	// as possible.
@@ -121,7 +125,7 @@
 				}
 			});
 		}
-	}
+	};
 
 	window.releaseEvent = function (eventName) {
 		///<summary>
@@ -150,5 +154,5 @@
 				sink.element.bind('captured' + eventName + '.capturingTool', sink.handler);
 			}
 		}
-	}
+	};
 })(jQuery);
