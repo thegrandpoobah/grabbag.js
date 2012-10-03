@@ -1,6 +1,14 @@
 var fs = require('fs'),
 	sys = require('util'),
+	jshint = require('jshint'),
 	uglify = require('uglify-js');
+
+var sourceFiles = [
+	'ancestorscroll.js',
+	'events-capture.js',
+	'string-measurement.js',
+	'z-manager.js'
+];
 
 function makeDirectoryIfNotExists(path) {
 	try {
@@ -40,13 +48,23 @@ function concatenate(files, outputFile, withPreamble) {
 }
 
 desc('Concatenation');
-task('concatenate', function(params) {
-	concatenate([
-		'ancestorscroll.js'
-		, 'events-capture.js'
-		, 'string-measurement.js'
-		, 'z-manager.js'
-	], 'grabbag.js', true);
+task('concatenate', ['lint'], function(params) {
+	concatenate(sourceFiles, 'grabbag.js', true);
+});
+
+desc('Code Lint');
+task('lint', function() {
+	sourceFiles.forEach(function(file, i) {
+		var all = fs.readFileSync('src/' + file).toString();
+		
+		var result = jshint.JSHINT(all, {}, {});
+		if (!result) {
+			for (var i = 0; i < jshint.JSHINT.errors.length; i++) {
+				var error = jshint.JSHINT.errors[i];
+				console.error('file: ' + file + ', line: ' + error.line + ', char ' + error.character + ': ' + error.reason);
+			}
+		}
+	});
 });
 
 desc('Obfuscation and Compression');
@@ -68,3 +86,5 @@ task({'minify': ['concatenate']}, function(params) {
 
 	minify('grabbag.js', 'grabbag.min.js');
 });
+
+task('default', ['minify'], function() {});
