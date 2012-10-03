@@ -45,12 +45,13 @@ A couple of dependencies before the library can be built:
 - Node for Windows (A version that includes `npm` by default. I believe 0.6.x has it now)
 - Jake installed globally (`npm install -g jake`)
 - Uglify-JS installed locally (`npm install uglify-js`)
+- JSHint installed locally (`npm install jshint`)
 
 ## Building
 
 Once all the dependencies are installed, you can build the project using the following command line
 
-	jake ugfily
+	jake
 
 ## Licensing
 
