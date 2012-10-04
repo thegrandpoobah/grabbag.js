@@ -5,9 +5,9 @@ var fs = require('fs'),
 
 var sourceFiles = [
 	'ancestorscroll.js',
-	'events-capture.js',
-	'string-measurement.js',
-	'z-manager.js'
+	'event.js',
+	'measure.js',
+	'zManager.js'
 ];
 
 function makeDirectoryIfNotExists(path) {
