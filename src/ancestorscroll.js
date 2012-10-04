@@ -17,6 +17,11 @@
 		$(self).parents().add(window)[action](evs.join(' '), handleObj.handler);
 	}
 
+	/**
+	  ancestorscroll is a jQuery special event to overcome the nightmare that is the built in HTML DOM
+	  scroll events. There are no less than four events that can potentially fire depending on how and on what
+	  the user started their scroll action. What is worse, some of the scroll-based events bubble, while others do not.
+	*/
 	$.event.special.ancestorscroll = {
 		add: function (handleObj) {
 			rebind(this, handleObj, 'bind');
