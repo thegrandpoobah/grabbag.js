@@ -429,7 +429,7 @@ window.grabbag = {};
 				bisection, partial = str.toString(),
 				width;
 			
-			if (!postfix) {
+			if (!postfix && postfix !== '') {
 				postfix = '...';
 			}
 			
