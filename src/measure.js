@@ -191,18 +191,24 @@
 			a DOM element.
 		  @param element A DOM element to borrow the font styles from. The styles
 			are taken from the computed style of the DOM element.
+		  @param postfix A string to append to the cropped string. By default this is
+		    the ellipsis glyph (...).
 		  @remark Only one of style or element can be specified.
 		  
 		  @returns If the width of the input string is shorter than targetWidth
 			the original string is returned. If the width of the input string is 
 			longer, a cropped version of the string is returned with the
-			ellipsis glyph (...) appended to the end. If the cropped string will 
-			only be the ellipsis glyph (...), then the empty string is returned.
+			postfix paramter appended to the end. If the cropped string will 
+			only be the postfix, then the empty string is returned.
 		*/
-		crop: function measure$crop(str, targetWidth, style) {
+		crop: function measure$crop(str, targetWidth, style, postfix) {
 			var start, end,
 				bisection, partial = str.toString(),
 				width;
+			
+			if (!postfix) {
+				postfix = '...';
+			}
 			
 			attachMeasurementDiv(style);
 			
@@ -213,7 +219,7 @@
 				
 				do {
 					bisection = start + Math.ceil((end - start) / 2);
-					partial = str.substring(0, bisection) + '...';
+					partial = str.substring(0, bisection) + postfix;
 					width = internalMeasureString(partial).width;
 
 					if (width > targetWidth) {
