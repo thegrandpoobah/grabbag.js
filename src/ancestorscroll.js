@@ -3,6 +3,10 @@
 	
 	'use strict';
 	
+	if (!jQuery) {
+		return;
+	}
+	
 	// one event named 'scroll' is not good enough
 	// to determine when something scrolls apparently
 	var scrollEvents = ['scroll', 'mousewheel', 'wheel', 'DOMMouseScroll'],

@@ -20,6 +20,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+window.grabbag = {};
 (function ($) {
 	/*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true, undef:true, unused:true, smarttabs:true, browser:true, jquery:true */
 	
@@ -39,6 +40,11 @@ THE SOFTWARE.
 		$(self).parents().add(window)[action](evs.join(' '), handleObj.handler);
 	}
 
+	/**
+	  ancestorscroll is a jQuery special event to overcome the nightmare that is the built in HTML DOM
+	  scroll events. There are no less than four events that can potentially fire depending on how and on what
+	  the user started their scroll action. What is worse, some of the scroll-based events bubble, while others do not.
+	*/
 	$.event.special.ancestorscroll = {
 		add: function (handleObj) {
 			rebind(this, handleObj, 'bind');
@@ -51,6 +57,7 @@ THE SOFTWARE.
 
 (function($, undefined) {
 	/*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true, undef:true, unused:true, smarttabs:true, browser:true, jquery:true */
+	/*global grabbag:true */
 	
 	'use strict';
 	
@@ -118,97 +125,97 @@ THE SOFTWARE.
 		};
 	});
 
-	window.captureEvent = function (eventName, element, handler) {
-		///<summary>
-		/// When an event is "captured", all future instances of that event will first get routed through the
-		/// element who called for the capture before bubbling up the DOM tree as usual. This allows the
-		/// captor element to inspect the incoming event and either mutate it, or perform a specific action
-		/// in response to an event that is "outside" of its DOM.
-		/// Once an event is captured, if that event is triggered, the matching 'captured' version of that event
-		/// is triggered on the captor element. So for example, if you capture the 'mousedown' event with element x,
-		/// a 'capturedmousedown' event is first triggered on element x before the usual mousedown trigger and bubble.
-		/// Note that captured events "stack", meaning that if an existing captor exists for an event and that event
-		/// is captured again, a subsequent releaseEvent call will reroute events to that captor.
-		///
-		/// This functionality is based on the WIN32 SetCapture API which routes all mouse events through a particular
-		/// window. For more information: http://msdn.microsoft.com/en-us/library/ms646262%28VS.85%29.aspx
-		///</summary>
-		///<param name="eventName">The name of the DOM event to capture.</param>
-		///<param name="element">The DOM element that is designated as the captor.</param>
-		///<param name="handler">
-		/// [OPTIONAL] The function to call that will inspect the captured event.
-		/// When the handler is bound through this function, it will be unbound when calling releaseEvent.
-		/// Otherwise, you can bind the handler manually by writing $(element).bind('captured' + eventName', function(eventArgs) {});
-		/// The eventArgs.originalTarget contains the DOM element that initially triggered the event.
-		/// </param>
-		///</remarks>
-		/// Although it is highly recommended that the element argument be an actual DOM element, the code
-		/// does not make this check and the parameter can just as easily be an object literal. This functionality
-		/// is not tested and should be avoided.
-		///</remarks>
-		var sink = captureSinks[eventName];
+	grabbag.event = {
+		/**
+		  When an event is "captured", all future instances of that event will first get routed through the
+		  element who called for the capture before bubbling up the DOM tree as usual. This allows the
+		  captor element to inspect the incoming event and either mutate it, or perform a specific action
+		  in response to an event that is "outside" of its DOM.
+		  Once an event is captured, if that event is triggered, the matching 'captured' version of that event
+		  is triggered on the captor element. So for example, if you capture the 'mousedown' event with element x,
+		  a 'capturedmousedown' event is first triggered on element x before the usual mousedown trigger and bubble.
+		  Note that captured events "stack", meaning that if an existing captor exists for an event and that event
+		  is captured again, a subsequent releaseEvent call will reroute events to that captor.
+		  
+		  This functionality is based on the WIN32 SetCapture API which routes all mouse events through a particular
+		  window. For more information: http://msdn.microsoft.com/en-us/library/ms646262%28VS.85%29.aspx
 		
-		if (typeof (sink) === 'undefined') {
-			// if event is not captured, then there is nothing to do
-			return;
-		}
+		  @param eventName The name of the DOM event to capture.
+		  @param element The DOM element that is designated as the captor.
+		  @handler The function to call that will inspect the captured event.
+		    When the handler is bound through this function, it will be unbound when calling grabbag.event.release.
+		    Otherwise, you can bind the handler manually by writing $(element).bind('captured' + eventName, function(eventArgs() {});
+		    The eventArgs.originalTarget property contains the DOM element that initially triggered the event.
+		
+		  @remarks 
+		  Although it is highly recommended that the element argument be an actual DOM element, the code
+		  does not make this check and the parameter can just as easily be an object literal. This functionality
+		  is not tested and should be avoided.
+		*/
+		capture: function event$capture(eventName, element, handler) {
+			var sink = captureSinks[eventName];
+			
+			if (typeof (sink) === 'undefined') {
+				// if event is not captured, then there is nothing to do
+				return;
+			}
 
-		if (sink.length > 0) {
-			// if an existing capture exists, disable the capture
-			sink.peek().element.unbind('captured' + eventName + '.capturingTool');
-		}
+			if (sink.length > 0) {
+				// if an existing capture exists, disable the capture
+				sink.peek().element.unbind('captured' + eventName + '.capturingTool');
+			}
 
-		sink.push({ element: $(element), handler: handler });
-		if ($.isFunction(handler)) {
-			sink.peek().element.bind('captured' + eventName + '.capturingTool', handler);
-		}
+			sink.push({ element: $(element), handler: handler });
+			if ($.isFunction(handler)) {
+				sink.peek().element.bind('captured' + eventName + '.capturingTool', handler);
+			}
 
-		if (sink.length === 1) {
-			// if this is the first capture to get added, then hook the final source
-			$window.bind(eventName + '.capturingTool', function (eventArgs) {
-				// if the originating event bubbled all the way up to the document node,
-				// then perhaps no interested consumers exist for the event, which means
-				// the event filter won't be installed.
-				// but we have to funnel the event to the appropriate capture sink anyways
-				// so do that here.
-				if (sink.length !== 0 && !$(eventArgs.originalEvent).data('executedCapture')) {
-					sink.peek().element.trigger(createCapturedEventArgs(eventArgs));
+			if (sink.length === 1) {
+				// if this is the first capture to get added, then hook the final source
+				$window.bind(eventName + '.capturingTool', function (eventArgs) {
+					// if the originating event bubbled all the way up to the document node,
+					// then perhaps no interested consumers exist for the event, which means
+					// the event filter won't be installed.
+					// but we have to funnel the event to the appropriate capture sink anyways
+					// so do that here.
+					if (sink.length !== 0 && !$(eventArgs.originalEvent).data('executedCapture')) {
+						sink.peek().element.trigger(createCapturedEventArgs(eventArgs));
+					}
+				});
+			}
+		},
+		/**
+		  Releases the current capture on the event specified by eventName.
+		  If eventName is not captured, this function is effectively a no-op.
+		*/
+		release: function event$release(eventName) {
+			var sink;
+
+			if ((captureSinks[eventName] || { length: 0 }).length === 0) {
+				// if eventName is not captured, or the stack is empty
+				// then there is nothing to do
+				return;
+			}
+
+			sink = captureSinks[eventName].pop();
+			sink.element.unbind('captured' + eventName + '.capturingTool');
+
+			if (captureSinks[eventName].length === 0) {
+				// if this was the last capture, then remove the final source
+				$window.unbind(eventName + '.capturingTool');
+			} else {
+				// if there were captures we stacked on, rebind
+				sink = captureSinks[eventName].peek();
+				if ($.isFunction(sink.handler)) {
+					sink.element.bind('captured' + eventName + '.capturingTool', sink.handler);
 				}
-			});
-		}
-	};
-
-	window.releaseEvent = function (eventName) {
-		///<summary>
-		/// Releases the current capture on the event specified by eventName.
-		/// If eventName is not captured, this function is effectively a no-op.
-		///</summary>
-		///<param name="eventName">The captured event to release</param>
-		var sink;
-
-		if ((captureSinks[eventName] || { length: 0 }).length === 0) {
-			// if eventName is not captured, or the stack is empty
-			// then there is nothing to do
-			return;
-		}
-
-		sink = captureSinks[eventName].pop();
-		sink.element.unbind('captured' + eventName + '.capturingTool');
-
-		if (captureSinks[eventName].length === 0) {
-			// if this was the last capture, then remove the final source
-			$window.unbind(eventName + '.capturingTool');
-		} else {
-			// if there were captures we stacked on, rebind
-			sink = captureSinks[eventName].peek();
-			if ($.isFunction(sink.handler)) {
-				sink.element.bind('captured' + eventName + '.capturingTool', sink.handler);
 			}
 		}
 	};
 })(jQuery);
 (function(undefined) {
 	/*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true, undef:true, unused:true, smarttabs:true, browser:true */
+	/*global grabbag:true */
 	
 	'use strict';
 	
@@ -286,163 +293,167 @@ THE SOFTWARE.
 	}
 	
 	/**
-	  Returns the dimensions of a given string using a given set of styles.
-	  
-	  @param style An object literal which contains one or more of the
-	    following properties:
-		
-		  * fontFamily 
-		  * fontSize 
-		  * fontStyle 
-		  * fontVariant 
-		  * fontWeight
-		
-		These properties have their usual CSS meanings.
-		
-		OR 
-		
-		a string representing the short-form 'font' CSS property.
-		
-		Note: The object literal can be the style/currentStyle property of
-		a DOM element.
-	  @param element A DOM element to borrow the font styles from. The styles
-	    are taken from the computed style of the DOM element.
-	  @remark Only one of style or element can be specified.
-	  
-	  @returns The width/height of the measured string in the following object
-	    literal: {width: [width], height: [height]). 
+	  Provides utility functions to measure various DOM objects
 	*/
-	String.prototype.measure = function(style) {
-		var result;
-		
-		attachMeasurementDiv(style);
-		result = internalMeasureString(this.toString());
-		detachMeasurementDiv();
-	
-		return result;
-	};
-
-	/**
-	  Measures a list of strings and returns all of their dimensions.
-	  
-	  This method is significantly faster than ''.measure if a lot of
-	  strings have to be measured using the same style.
-
-	  @param strs An array of strings to measure
-	  @param style An object literal which contains one or more of the
-	    following properties:
-		
-		  * fontFamily 
-		  * fontSize 
-		  * fontStyle 
-		  * fontVariant 
-		  * fontWeight
-		
-		These properties have their usual CSS meanings.
-		
-		OR 
-		
-		a string representing the short-form 'font' CSS property.
-		
-		Note: The object literal can be the style/currentStyle property of
-		a DOM element.
-	  @param element A DOM element to borrow the font styles from. The styles
-	    are taken from the computed style of the DOM element.
-	  @remark Only one of style or element can be specified.
-	  
-	  @returns An array with the width/height dimensions of the input strings
-	    in the same order as the strs parameter.
-	*/
-	String.bulkMeasure = function(strs, style) {
-		var i, n,
-			result = [];
-		
-		attachMeasurementDiv(style);
-		
-		for (i=0, n = strs.length; i<n; ++i) {
-			result.push(internalMeasureString(strs[i]));
-		}
-		
-		detachMeasurementDiv();
-		
-		return result;
-	};
-	
-	/**
-	  Crops the given string so that the pixel width of the resultant
-	  string is not longer than the target width. If the string is longer,
-          then the string is cropped and the ellipsis glyph is added to the end.
-	  
-	  @param targetWidth The target pixel width of the resultant string.
-	    The output string is gauranteed to be shorter than this width.
-	  @param style An object literal which contains one or more of the
-	    following properties:
-		
-		  * fontFamily 
-		  * fontSize 
-		  * fontStyle 
-		  * fontVariant 
-		  * fontWeight
-		
-		These properties have their usual CSS meanings.
-		
-		OR 
-		
-		a string representing the short-form 'font' CSS property.
-		
-		Note: The object literal can be the style/currentStyle property of
-		a DOM element.
-	  @param element A DOM element to borrow the font styles from. The styles
-	    are taken from the computed style of the DOM element.
-	  @remark Only one of style or element can be specified.
-	  
-	  @returns If the width of the input string is shorter than targetWidth
-	    the original string is returned. If the width of the input string is 
-		longer, a cropped version of the string is returned with the
-		ellipsis glyph (...) appended to the end. If the cropped string will 
-		only be the ellipsis glyph (...), then the empty string is returned.
-	*/
-	String.prototype.crop = function(targetWidth, style) { 
-		var start, end,
-			bisection, partial = this.toString(),
-			width;
-		
-		attachMeasurementDiv(style);
-		
-		width = internalMeasureString(partial).width;
-		if (width > targetWidth) {
-			start = 0;
-			end = this.length;
+	grabbag.measure = {
+		/**
+		  Returns the dimensions of a given string using a given set of styles.
+		  
+		  @param str A string to measure
+		  @param style An object literal which contains one or more of the
+			following properties:
 			
-			do {
-				bisection = start + Math.ceil((end - start) / 2);
-				partial = this.substring(0, bisection) + '...';
-				width = internalMeasureString(partial).width;
+			  * fontFamily 
+			  * fontSize 
+			  * fontStyle 
+			  * fontVariant 
+			  * fontWeight
+			
+			These properties have their usual CSS meanings.
+			
+			OR 
+			
+			a string representing the short-form 'font' CSS property.
+			
+			Note: The object literal can be the style/currentStyle property of
+			a DOM element.
+		  @param element A DOM element to borrow the font styles from. The styles
+			are taken from the computed style of the DOM element.
+		  @remark Only one of style or element can be specified.
+		  
+		  @returns The width/height of the measured string in the following object
+			literal: {width: [width], height: [height]). 
+		*/
+		string: function measure$string(str, style) {
+			var result;
+			
+			attachMeasurementDiv(style);
+			result = internalMeasureString(str.toString());
+			detachMeasurementDiv();
+		
+			return result;
+		},
+		
+		/**
+		  Measures a list of strings and returns all of their dimensions.
+		  
+		  This method is significantly faster than ''.measure if a lot of
+		  strings have to be measured using the same style.
 
-				if (width > targetWidth) {
-					end = bisection;
-				} else {
-					start = bisection;
-				}
-			} while (end - start > 1);
+		  @param strs An array of strings to measure
+		  @param style An object literal which contains one or more of the
+			following properties:
+			
+			  * fontFamily 
+			  * fontSize 
+			  * fontStyle 
+			  * fontVariant 
+			  * fontWeight
+			
+			These properties have their usual CSS meanings.
+			
+			OR 
+			
+			a string representing the short-form 'font' CSS property.
+			
+			Note: The object literal can be the style/currentStyle property of
+			a DOM element.
+		  @param element A DOM element to borrow the font styles from. The styles
+			are taken from the computed style of the DOM element.
+		  @remark Only one of style or element can be specified.
+		  
+		  @returns An array with the width/height dimensions of the input strings
+			in the same order as the strs parameter.
+		*/
+		strings: function measure$strings(strs, style) {
+			var i, n,
+				result = [];
+			
+			attachMeasurementDiv(style);
+			
+			for (i=0, n = strs.length; i<n; ++i) {
+				result.push(internalMeasureString(strs[i]));
+			}
+			
+			detachMeasurementDiv();
+			
+			return result;
+		},
+		
+		/**
+		  Crops the given string so that the pixel width of the resultant
+		  string is not longer than the target width. If the string is longer,
+			  then the string is cropped and the ellipsis glyph is added to the end.
+		  
+		  @param targetWidth The target pixel width of the resultant string.
+			The output string is gauranteed to be shorter than this width.
+		  @param style An object literal which contains one or more of the
+			following properties:
+			
+			  * fontFamily 
+			  * fontSize 
+			  * fontStyle 
+			  * fontVariant 
+			  * fontWeight
+			
+			These properties have their usual CSS meanings.
+			
+			OR 
+			
+			a string representing the short-form 'font' CSS property.
+			
+			Note: The object literal can be the style/currentStyle property of
+			a DOM element.
+		  @param element A DOM element to borrow the font styles from. The styles
+			are taken from the computed style of the DOM element.
+		  @remark Only one of style or element can be specified.
+		  
+		  @returns If the width of the input string is shorter than targetWidth
+			the original string is returned. If the width of the input string is 
+			longer, a cropped version of the string is returned with the
+			ellipsis glyph (...) appended to the end. If the cropped string will 
+			only be the ellipsis glyph (...), then the empty string is returned.
+		*/
+		crop: function measure$crop(str, targetWidth, style) {
+			var start, end,
+				bisection, partial = str.toString(),
+				width;
+			
+			attachMeasurementDiv(style);
+			
+			width = internalMeasureString(partial).width;
+			if (width > targetWidth) {
+				start = 0;
+				end = str.length;
+				
+				do {
+					bisection = start + Math.ceil((end - start) / 2);
+					partial = str.substring(0, bisection) + '...';
+					width = internalMeasureString(partial).width;
+
+					if (width > targetWidth) {
+						end = bisection;
+					} else {
+						start = bisection;
+					}
+				} while (end - start > 1);
+			}
+			
+			// if the result will effectively be empty, 
+			// then return the empty string
+			if (start === 0 && end === 1 && width > targetWidth) {
+				partial = '';
+			}
+			
+			detachMeasurementDiv();
+			
+			return partial;
 		}
-		
-		// if the result will effectively be empty, 
-		// then return the empty string
-		if (start === 0 && end === 1 && width > targetWidth) {
-			partial = '';
-		}
-		
-		detachMeasurementDiv();
-		
-		return partial;
 	};
 })();
-// z-manager maintains an ordered list of DOM elements and ensures that they are ordered
-// back-to-front in the browser's z-ordering. The list is live, which means that any modification to the list
-// results in an update to the browser's DOM.
 (function ($, undefined) {
 	/*jshint bitwise:true, curly:true, eqeqeq:true, immed:true, latedef:true, undef:true, unused:true, smarttabs:true, browser:true, jquery:true */
+	/*global grabbag:true */
 
 	'use strict';
 
@@ -450,16 +461,79 @@ THE SOFTWARE.
 
 	var list = [];
 
-	window.zManager = {
+	function updateZIndexes(index) {
+		var curr, prev, next,
+			first = true;
+
+		curr = list[index];
+		if (index !== 0) {
+			prev = list[index - 1];
+		} else {
+			prev = { layer: BASIS - 1 };
+		}
+
+		if (index !== list.length - 1) {
+			next = list[index + 1];
+		}
+
+		while (curr) {
+			if (curr.layer <= prev.layer || first) {
+				// curr is behind prev, even though it should be ahead
+				curr.layer = prev.layer + 1;
+				$(curr.element).css('z-index', curr.layer);
+
+				first = false;
+			}
+
+			if (next && next.layer > curr.layer) {
+				// next is ahead of curr's new value, so the rest of the list is 
+				// ordered correctly
+				break;
+			}
+
+			prev = curr;
+			curr = next;
+
+			index++;
+
+			if (index !== list.length - 1) {
+				next = list[index + 1];
+			} else {
+				next = null;
+			}
+		}
+	}
+
+	function find(element) {
+		var existingIndex = null;
+
+		$.each(list, function (i, e) {
+			if (e.element === element) {
+				existingIndex = i;
+				return false;
+			}
+		});
+
+		return existingIndex;
+	}
+
+	/**
+	  Provides a mechanism to maintain an ordered list of DOM elements and ensures that they are
+	  ordered back-to-front in the browser's z-ordering. The list is live, which means that any
+	  modification to the list results in an update to the browser's DOM.
+	*/
+	grabbag.zManager = {
+		/**
+		  Adds an element to the managed z-index list. Once managed, an element is guaranteed to have a z-index
+		  larger than its predecessor and smaller than its successor. If the element is already managed
+		  the element is moved to its new location in the z-index list. 
+		  
+		  @param element The element to insert into the managed z-index list.
+		  @param index At which layer to insert the element. If omitted, the element will be added as the
+		         top-most layer.
+		*/
 		add: function zManager$add(element, index) {
-			///<summary>
-			/// Adds an element to the managed z-index list. Once managed, an element is guaranteed to have a z-index
-			/// larger than its predecessor and smaller than its successor. If the element is already managed
-			/// the element is moved to its new location in the z-index list. 
-			///</summary>
-			///<param name="element">The element to insert into the managed z-index list.</param>
-			///<param name="index" optional="true">At which layer to insert the element. If omitted, the element will be added as the top-most layer.</param>
-			var existingIndex = this._find(element), entry;
+			var existingIndex = find(element), entry;
 
 			if (existingIndex !== null) {
 				// if it already exists, splice it out
@@ -478,17 +552,19 @@ THE SOFTWARE.
 
 			if (typeof index === 'undefined') {
 				list.push(entry);
-				this._updateZIndexes(list.length - 1);
+				updateZIndexes(list.length - 1);
 			} else {
 				list.splice(index, 0, entry);
-				this._updateZIndexes(index);
+				updateZIndexes(index);
 			}
 		},
+		/**
+		  Removes an element from the managed z-index list.
+		  
+		  @param element The elemetn to remove from the managed z-index list.
+		*/
 		remove: function zManager$remove(element) {
-			///<summary>
-			/// Removes an element from the managed z-index list.
-			///</summary>
-			var existingIndex = this._find(element);
+			var existingIndex = find(element);
 
 			if (existingIndex !== null) {
 				// if it already exists, splice it out
@@ -497,82 +573,32 @@ THE SOFTWARE.
 			}
 		},
 
+		/**
+		  Brings an element to the front of the z-index list, ensuring it is the top-most object in the z stack.
+		  This is just a short form for this.add(element);
+		  
+		  @param element The element to bring to the front of the managed z-index list.
+		*/
 		bringToFront: function zManager$bringToFront(element) {
-			///<summary>
-			/// Brings an element to the front of the z-index list, ensuring it is the top-most object in the z stack.
-			/// This is just a short form for this.add(element);
-			///</summary>
 			this.add(element);
 		},
+		/**
+		  Moves an element to the back of the z-index list, ensuring it is the bottom-most object in the z stack.
+		  This is basically syntactic sugar for this.add(element, 0);
+		  
+		  @param element The element to move to the back of the managed z-index list.
+		*/
 		moveToBack: function zManager$moveToBack(element) {
-			///<summary>
-			/// Moves an element to the back of the z-index list, ensuring it is the bottom-most object in the z stack.
-			/// This is just a short form for this.add(element, 0);
-			///</summary>
 			this.add(element, 0);
 		},
 
+		/**
+		  Returns the maximum z-index value issued by the manager.
+		  
+		  @returns An integer representing the maximum CSS z-index value issued by the z-Manager.
+		*/
 		maxZIndex: function zManager$maxZIndex() {
-			///<summary>
-			/// Returns the maximum z-index value issued by the manager.
-			///</summary>
 			return list[list.length - 1].layer;
-		},
-
-		_find: function zManager$_find(element) {
-			var existingIndex = null;
-
-			$.each(list, function (i, e) {
-				if (e.element === element) {
-					existingIndex = i;
-					return false;
-				}
-			});
-
-			return existingIndex;
-		},
-
-		_updateZIndexes: function zManager$_updateZIndexes(index) {
-			var curr, prev, next,
-				first = true;
-
-			curr = list[index];
-			if (index !== 0) {
-				prev = list[index - 1];
-			} else {
-				prev = { layer: BASIS - 1 };
-			}
-
-			if (index !== list.length - 1) {
-				next = list[index + 1];
-			}
-
-			while (curr) {
-				if (curr.layer <= prev.layer || first) {
-					// curr is behind prev, even though it should be ahead
-					curr.layer = prev.layer + 1;
-					$(curr.element).css('z-index', curr.layer);
-
-					first = false;
-				}
-
-				if (next && next.layer > curr.layer) {
-					// next is ahead of curr's new value, so the rest of the list is 
-					// ordered correctly
-					break;
-				}
-
-				prev = curr;
-				curr = next;
-
-				index++;
-
-				if (index !== list.length - 1) {
-					next = list[index + 1];
-				} else {
-					next = null;
-				}
-			}
 		}
 	};
 })(jQuery);

@@ -4,6 +4,10 @@
 	
 	'use strict';
 	
+	if (!jQuery) {
+		return;
+	}
+	
 	// this is a list of valid events to capture. Because there is some overhead involved
 	// in having the capturing "infrastructure" in place, this list should be kept as small
 	// as possible.
@@ -86,9 +90,9 @@
 		  @param eventName The name of the DOM event to capture.
 		  @param element The DOM element that is designated as the captor.
 		  @handler The function to call that will inspect the captured event.
-		    When the handler is bound through this function, it will be unbound when calling grabbag.event.release.
-		    Otherwise, you can bind the handler manually by writing $(element).bind('captured' + eventName, function(eventArgs() {});
-		    The eventArgs.originalTarget property contains the DOM element that initially triggered the event.
+			When the handler is bound through this function, it will be unbound when calling grabbag.event.release.
+			Otherwise, you can bind the handler manually by writing $(element).bind('captured' + eventName, function(eventArgs() {});
+			The eventArgs.originalTarget property contains the DOM element that initially triggered the event.
 		
 		  @remarks 
 		  Although it is highly recommended that the element argument be an actual DOM element, the code
