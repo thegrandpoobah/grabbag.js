@@ -26,6 +26,10 @@ window.grabbag = {};
 	
 	'use strict';
 	
+	if (!jQuery) {
+		return;
+	}
+	
 	// one event named 'scroll' is not good enough
 	// to determine when something scrolls apparently
 	var scrollEvents = ['scroll', 'mousewheel', 'wheel', 'DOMMouseScroll'],
@@ -60,6 +64,10 @@ window.grabbag = {};
 	/*global grabbag:true */
 	
 	'use strict';
+	
+	if (!jQuery) {
+		return;
+	}
 	
 	// this is a list of valid events to capture. Because there is some overhead involved
 	// in having the capturing "infrastructure" in place, this list should be kept as small
@@ -143,9 +151,9 @@ window.grabbag = {};
 		  @param eventName The name of the DOM event to capture.
 		  @param element The DOM element that is designated as the captor.
 		  @handler The function to call that will inspect the captured event.
-		    When the handler is bound through this function, it will be unbound when calling grabbag.event.release.
-		    Otherwise, you can bind the handler manually by writing $(element).bind('captured' + eventName, function(eventArgs() {});
-		    The eventArgs.originalTarget property contains the DOM element that initially triggered the event.
+			When the handler is bound through this function, it will be unbound when calling grabbag.event.release.
+			Otherwise, you can bind the handler manually by writing $(element).bind('captured' + eventName, function(eventArgs() {});
+			The eventArgs.originalTarget property contains the DOM element that initially triggered the event.
 		
 		  @remarks 
 		  Although it is highly recommended that the element argument be an actual DOM element, the code
@@ -406,18 +414,24 @@ window.grabbag = {};
 			a DOM element.
 		  @param element A DOM element to borrow the font styles from. The styles
 			are taken from the computed style of the DOM element.
+		  @param postfix A string to append to the cropped string. By default this is
+		    the ellipsis glyph (...).
 		  @remark Only one of style or element can be specified.
 		  
 		  @returns If the width of the input string is shorter than targetWidth
 			the original string is returned. If the width of the input string is 
 			longer, a cropped version of the string is returned with the
-			ellipsis glyph (...) appended to the end. If the cropped string will 
-			only be the ellipsis glyph (...), then the empty string is returned.
+			postfix paramter appended to the end. If the cropped string will 
+			only be the postfix, then the empty string is returned.
 		*/
-		crop: function measure$crop(str, targetWidth, style) {
+		crop: function measure$crop(str, targetWidth, style, postfix) {
 			var start, end,
 				bisection, partial = str.toString(),
 				width;
+			
+			if (!postfix) {
+				postfix = '...';
+			}
 			
 			attachMeasurementDiv(style);
 			
@@ -428,7 +442,7 @@ window.grabbag = {};
 				
 				do {
 					bisection = start + Math.ceil((end - start) / 2);
-					partial = str.substring(0, bisection) + '...';
+					partial = str.substring(0, bisection) + postfix;
 					width = internalMeasureString(partial).width;
 
 					if (width > targetWidth) {
